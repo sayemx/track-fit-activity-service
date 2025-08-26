@@ -1,18 +1,7 @@
-#mongodb://localhost:27017/
 
-server:
-  port: 8082
   
 spring:
   application:
     name: activity-service
-  data:
-    mongodb:
-      uri: mongodb://localhost:27017/trackfit_activity_db
-      database: trackfit_activity_db
-
-      
-eureka:
-  client:
-    service-url:
-      defaultZone: http://localhost:8761/eureka/
+  config:
+    import: optional:configserver:http://localhost:8888

@@ -3,6 +3,8 @@ package com.sayem.trackfit.activity.service.impl;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -16,20 +18,30 @@ import com.sayem.trackfit.activity.service.IActivityService;
 import com.sayem.trackfit.activity.service.client.UserFeignClient;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ActivityServiceImpl implements IActivityService {
 	
 	private final ActivityRepository activityRepositoty;
 	private final UserFeignClient userfeigClient;
+	private final RabbitTemplate rabbitTemplate;
+	
+	@Value("${rabbitmq.exchange.name}")
+	private String exchange;
+	
+	@Value("${rabbitmq.routing.key}")
+	private String routingKey;
 
 	@Override
 	public ActivityResponse trackActivity(ActivityRequest activityRequest) {
 		
-		ResponseEntity<Boolean> validateUser = userfeigClient.validateUser(activityRequest.getUserId());
+		ResponseEntity<Boolean> validateUserById = userfeigClient.validateUserByUserId(activityRequest.getUserId());
+		ResponseEntity<Boolean> validateUserByKeycloak = userfeigClient.validateUserByKeycloakId(activityRequest.getUserId());
 		
-		if(!validateUser.getBody()) {
+		if(!validateUserById.getBody() && !validateUserByKeycloak.getBody()) {
 			throw new UserNotFoundException(activityRequest.getUserId());
 		}
 		
@@ -43,6 +55,13 @@ public class ActivityServiceImpl implements IActivityService {
 				.build();
 		
 		Activity savedActivity = activityRepositoty.save(activity);
+		
+		try {
+			rabbitTemplate.convertAndSend(exchange, routingKey, savedActivity);
+			log.info("Pushed the activity to the queue: {}", savedActivity);
+		} catch(Exception e) {
+			log.error("Failed to publish activity to RabbitMQ: {}", e);
+		}
 		
 		return mapToResponse(savedActivity);
 	}
