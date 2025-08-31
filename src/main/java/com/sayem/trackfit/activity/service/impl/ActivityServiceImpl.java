@@ -29,11 +29,6 @@ public class ActivityServiceImpl implements IActivityService {
 	private final UserFeignClient userfeigClient;
 	private final RabbitTemplate rabbitTemplate;
 	
-	@Value("${rabbitmq.exchange.name}")
-	private String exchange;
-	
-	@Value("${rabbitmq.routing.key}")
-	private String routingKey;
 
 	@Override
 	public ActivityResponse trackActivity(ActivityRequest activityRequest) {
@@ -57,7 +52,7 @@ public class ActivityServiceImpl implements IActivityService {
 		Activity savedActivity = activityRepositoty.save(activity);
 		
 		try {
-			rabbitTemplate.convertAndSend(exchange, routingKey, savedActivity);
+			rabbitTemplate.convertAndSend("fitness.exchange", "activity.tracking", savedActivity);
 			log.info("Pushed the activity to the queue: {}", savedActivity);
 		} catch(Exception e) {
 			log.error("Failed to publish activity to RabbitMQ: {}", e);

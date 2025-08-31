@@ -13,32 +13,34 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class RabbitMqConfig {
 	
-	@Value("${rabbitmq.queue.name}")
-	private String queue;
-	
-	@Value("${rabbitmq.exchange.name}")
-	private String exchange;
-	
-	@Value("${rabbitmq.routing.key}")
-	private String routingKey;
-	
-	@Bean
-	public Queue activityQueue() {
-		return new Queue(queue, true);
-	}
-	
 	@Bean
 	public DirectExchange activityExchange() {
-		return new DirectExchange(exchange);
+		return new DirectExchange("fitness.exchange");
+	}
+	
+//	@Bean
+//	public Queue activityQueue() {
+//		return new Queue("activity.queue", true);
+//	}
+//	
+//	@Bean
+//	public Binding activityBinding(Queue activityQueue, DirectExchange activityExchange) {
+//		return BindingBuilder.bind(activityQueue).to(activityExchange).with("activity.tracking");
+//	}
+	
+	@Bean
+	public Queue excerciseQueue() {
+		return new Queue("excercise.queue", true);
 	}
 	
 	@Bean
-	public Binding activityBinding(Queue activityQueue, DirectExchange activityExchange) {
-		return BindingBuilder.bind(activityQueue).to(activityExchange).with(routingKey);
+	public Binding excerciseBinding(Queue excerciseQueue, DirectExchange activityExchange) {
+		return BindingBuilder.bind(excerciseQueue).to(activityExchange).with("excercise.tracking");
 	}
 	
 	@Bean
 	public MessageConverter jsonMessageConvertor() {
 		return new Jackson2JsonMessageConverter();
 	}
+	
 }
